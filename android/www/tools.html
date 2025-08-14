@@ -1,0 +1,33 @@
+<link rel="stylesheet" href="./style/ws.css">
+
+<!-- Menüleiste -->
+<div class="menu-bar">
+    <div class="menu-item" onclick="loadPage('home.html')">
+        <div class="inner">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" width="24px" height="24px" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5 3 12m0 0 7.5-7.5M3 12h18" />
+            </svg>
+        </div>
+    </div>
+    <div class="theme-box">
+        <button class="theme-toggle" type="button" title="Toggle theme" aria-label="Toggle theme" id="theme-toggle-button" onclick="toggleTheme()">
+            <svg xmlns="http://www.w3.org/2000/svg" aria-hidden="true" width="26px" height="26px" fill="currentColor" stroke-linecap="round" class="theme-toggle__classic" viewBox="0 0 32 32"><clipPath id="theme-toggle__classic__cutout"><path d="M0-5h30a1 1 0 0 0 9 13v24H0Z" /></clipPath><g clip-path="url(#theme-toggle__classic__cutout)"><circle cx="16" cy="16" r="9.34" /><g stroke="currentColor" stroke-width="1.5"><path d="M16 5.5v-4" /><path d="M16 30.5v-4" /><path d="M1.5 16h4" /><path d="M26.5 16h4" /><path d="m23.4 8.6 2.8-2.8" /><path d="m5.7 26.3 2.9-2.9" /><path d="m5.8 5.8 2.8 2.8" /><path d="m23.4 23.4 2.9 2.9" /></g></g></svg>
+        </button>
+    </div>
+    <div class="ws-status">
+        <div class="ws-indicator">
+            <span id="ws-indicator" class="status-dot disconnected"></span>
+            <span id="ws-text">Disconnected</span>
+        </div>
+        <button class="reconnect-button" onclick="connectWS()">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20px" height="20px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-rotate-cw"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+        </button>
+    </div>
+</div>
+
+<!-- Hauptcontainer -->
+<div class="main-container">
+    <iframe id="toolFrame" width="100%" height="100%"></iframe>
+</div>
+
+<script src="script/tools.js"></script>

@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Home - Base</title>
+    <link rel="stylesheet" href="style/style.css">
+    <link rel="stylesheet" href="style/basic.css">
+    <link rel="stylesheet" href="style/notification.css">
+    <link rel="stylesheet" href="style/ws.css">
+    <script src="script/preload.js"></script>
+</head>
+<body>
+    <!-- Titelleiste -->
+    <div class="title-bar">
+        <div class="title-bar-left">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <rect x="2" y="2" width="20" height="20" rx="5" fill="var(--accent)"></rect>
+                <path d="M7 12H17M12 7V17" stroke="white" stroke-width="2" stroke-linecap="round"></path>
+            </svg>
+            <span class="app-title">Home - Base</span>
+        </div>
+        <div class="title-bar-right">
+            <div class="window-control" id="minimize-btn">
+                <svg width="10" height="1" viewBox="0 0 10 1" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <rect width="10" height="1" fill="var(--text-primary)"></rect>
+                </svg>
+            </div>
+            <div class="window-control" id="maximize-btn">
+                <svg width="10" height="10" viewBox="0 0 10 10" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <rect x="0" y="0" width="10" height="10" stroke="var(--text-primary)" stroke-width="1" fill="none"></rect>
+                </svg>
+            </div>
+            <div class="window-control" id="close-btn">
+                <svg width="10" height="10" viewBox="0 0 10 10" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M1 1L9 9M9 1L1 9" stroke="var(--text-primary)" stroke-width="1.2" stroke-linecap="round"></path>
+                </svg>
+            </div>
+        </div>
+    </div>
+
+    <!-- Menüleiste -->
+    <div class="menu-bar">
+        <div class="menu-item">
+            Window
+            <div class="dropdown" style="display: none;">
+                <div class="dropdown-item" onclick="window.location.reload()">Reload</div>
+                <div class="dropdown-item" onclick="ipcRenderer.invoke('close-this')">Close</div>
+                <div class="dropdown-item" onclick="ipcRenderer.invoke('close-app')">Close All</div>
+            </div>
+        </div>
+        <div class="menu-item">
+            Account
+            <div class="dropdown" style="display: none;">
+                <div class="dropdown-item" onclick="window.location.href = path.join(__dirname, 'login.html');">Logout</div>
+            </div>
+        </div>
+        <div class="theme-toggle">
+            <span class="theme-toggle-label">Dark Mode</span>
+            <label class="switch">
+                <input type="checkbox" id="theme-toggle-checkbox" checked="">
+                <span class="slider"></span>
+            </label>
+        </div>
+        <div class="ws-status">
+            <span id="ws-indicator" class="status-dot disconnected"></span>
+            <span id="ws-text">Disconnected</span>
+            <button class="reconnect-button" onclick="ipcRenderer.invoke('reconnect-websocket')">Reconnect</button>
+        </div>
+    </div>
+
+    <!-- Hauptcontainer -->
+    <div class="main-container">
+        <!-- Inhaltsbereich -->
+        <div class="content-area">
+            <h2>Functions</h2>
+            <p style="margin: 10px 0 20px 0;">Double-click on a function to open it or use the action buttons.</p>
+            <input type="text" id="search-input" placeholder="Search functions..." class="form-control" style="margin-bottom: 15px; width: 300px;">
+            <div class="function-list" id="function-list"></div>
+        </div>
+    </div>
+
+    <!-- Schwebende Schaltfläche zum Hinzufügen einer neuen Funktion -->
+    <div class="add-function-btn" id="add-function-btn">+</div>
+
+    <!-- Modal für neue Funktion -->
+    <div class="modal" id="function-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-title" id="modal-title">Create new function</div>
+                <div class="modal-close" id="modal-close">×</div>
+            </div>
+            <div class="modal-body">
+                <form id="function-form">
+                    <div class="form-group">
+                        <label class="form-label" for="function-name">Name</label>
+                        <input type="text" class="form-control" id="function-name" placeholder="Enter name">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="function-description">Description</label>
+                        <textarea class="form-control" id="function-description" rows="3" placeholder="Enter description"></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" id="cancel-btn">Cancel</button>
+                <button class="btn btn-primary" id="save-btn">Save</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Kontextmenü -->
+    <div class="context-menu" id="context-menu" style="display: none;">
+        <div class="context-menu-item" id="context-open">Open</div>
+        <div class="context-menu-item" id="context-edit">Edit</div>
+        <div class="context-menu-item" id="context-files">Files</div>
+        <div class="context-menu-item" id="context-push">Push</div>
+        <div class="context-menu-separator"></div>
+        <div class="context-menu-item" id="context-delete">Delete</div>
+    </div>
+
+    <script src="script/main.js"></script>
+    <script src="script/window-bar.js"></script>
+    <script src="script/menu-bar.js"></script>
+    <script src="script/ws.js"></script>
+    <script src="script/notification.js"></script>
+
+</body></html>

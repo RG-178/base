@@ -1,0 +1,10 @@
+.main-container {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+}
+
+#toolFrame {
+    flex: 1;
+    border: none;
+}

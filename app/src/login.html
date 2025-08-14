@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - Base</title>
+    <link rel="stylesheet" href="style/basic.css">
+    <link rel="stylesheet" href="style/login.css">
+    <link rel="stylesheet" href="style/notification.css">
+    <script src="script/preload.js"></script>
+</head>
+<body>
+    <!-- Titelleiste -->
+    <div class="title-bar">
+        <div class="title-bar-left">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <rect x="2" y="2" width="20" height="20" rx="5" fill="var(--accent)"></rect>
+                <path d="M7 12H17M12 7V17" stroke="white" stroke-width="2" stroke-linecap="round"></path>
+            </svg>
+            <span class="app-title">Login - Base</span>
+        </div>
+        <div class="title-bar-right">
+            <div class="window-control" id="minimize-btn">
+                <svg width="10" height="1" viewBox="0 0 10 1" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <rect width="10" height="1" fill="var(--text-primary)"></rect>
+                </svg>
+            </div>
+            <div class="window-control" id="maximize-btn">
+                <svg width="10" height="10" viewBox="0 0 10 10" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <rect x="0" y="0" width="10" height="10" stroke="var(--text-primary)" stroke-width="1" fill="none"></rect>
+                </svg>
+            </div>
+            <div class="window-control" id="close-btn">
+                <svg width="10" height="10" viewBox="0 0 10 10" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M1 1L9 9M9 1L1 9" stroke="var(--text-primary)" stroke-width="1.2" stroke-linecap="round"></path>
+                </svg>
+            </div>
+        </div>
+    </div>
+
+    <!-- Menüleiste -->
+    <div class="menu-bar">
+       <div class="menu-item">
+            Window
+            <div class="dropdown" style="display: none;">
+                <div class="dropdown-item" onclick="window.location.reload()">Reload</div>
+                <div class="dropdown-item" onclick="ipcRenderer.invoke('close-this')">Close</div>
+                <div class="dropdown-item" onclick="ipcRenderer.invoke('close-app')">Close All</div>
+            </div>
+        </div>
+        <div class="theme-toggle">
+            <span class="theme-toggle-label">Dark Mode</span>
+            <label class="switch">
+                <input type="checkbox" id="theme-toggle-checkbox" checked="">
+                <span class="slider"></span>
+            </label>
+        </div>
+    </div>
+
+    <!-- Login-Container -->
+    <div class="login-container">
+        <div class="login-form">
+            <div class="login-header">
+                <div class="app-logo">
+                    <svg width="40" height="40" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M12 2C6.48 2 2 6.48 2 12C2 17.52 6.48 22 12 22C17.52 22 22 17.52 22 12C22 6.48 17.52 2 12 2ZM12 6C13.93 6 15.5 7.57 15.5 9.5C15.5 11.43 13.93 13 12 13C10.07 13 8.5 11.43 8.5 9.5C8.5 7.57 10.07 6 12 6ZM12 20C9.97 20 8.1 19.33 6.66 18.12C6.23 17.78 5.96 17.28 5.96 16.76C5.96 14.92 7.44 13.44 9.28 13.44H14.72C16.56 13.44 18.04 14.92 18.04 16.76C18.04 17.28 17.77 17.78 17.34 18.12C15.9 19.33 14.03 20 12 20Z" fill="white"></path>
+                    </svg>
+                </div>
+                <h1>Login</h1>
+                <p>Please log in with your access data</p>
+            </div>
+            <form id="login-form">
+                <div class="form-group">
+                    <label for="username">Username</label>
+                    <input type="text" id="username" class="form-control" placeholder="Enter username" required="">
+                </div>
+                <div class="form-group">
+                    <label for="password">Password</label>
+                    <input type="password" id="password" class="form-control" placeholder="Enter password" required="">
+                </div>
+                <button type="submit" class="login-btn">Login</button>
+            </form>
+            <div class="login-footer">
+                <p id="loginError" style="display: none;">Login Failed</p>
+            </div>
+        </div>
+    </div>
+
+    <script src="script/login.js"></script>
+    <script src="script/window-bar.js"></script>
+    <script src="script/menu-bar.js"></script>
+    <script src="script/notification.js"></script>
+
+</body></html>

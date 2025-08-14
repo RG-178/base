@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title class="title-name"></title>
+    <link rel="stylesheet" href="style/basic.css">
+    <link rel="stylesheet" href="style/tools.css">
+    <link rel="stylesheet" href="style/notification.css">
+    <link rel="stylesheet" href="style/ws.css">
+    <script src="script/preload.js"></script>
+</head>
+<body>
+    <!-- Titelleiste -->
+    <div class="title-bar">
+        <div class="title-bar-left">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <rect x="2" y="2" width="20" height="20" rx="5" fill="var(--accent)"></rect>
+                <path d="M7 12H17M12 7V17" stroke="white" stroke-width="2" stroke-linecap="round"></path>
+            </svg>
+            <span class="app-title title-name"></span>
+        </div>
+        <div class="title-bar-right">
+            <div class="window-control" id="minimize-btn">
+                <svg width="10" height="1" viewBox="0 0 10 1" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <rect width="10" height="1" fill="var(--text-primary)"></rect>
+                </svg>
+            </div>
+            <div class="window-control" id="maximize-btn">
+                <svg width="10" height="10" viewBox="0 0 10 10" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <rect x="0" y="0" width="10" height="10" stroke="var(--text-primary)" stroke-width="1" fill="none"></rect>
+                </svg>
+            </div>
+            <div class="window-control" id="close-btn">
+                <svg width="10" height="10" viewBox="0 0 10 10" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M1 1L9 9M9 1L1 9" stroke="var(--text-primary)" stroke-width="1.2" stroke-linecap="round"></path>
+                </svg>
+            </div>
+        </div>
+    </div>
+
+    <!-- Menüleiste -->
+    <div class="menu-bar">
+        <div class="menu-item" id="file-menu">
+            Window
+            <div class="dropdown" id="file-dropdown" style="display: none;">
+                <div class="dropdown-item" onclick="reloadIframe()">Reload</div>
+                <div class="dropdown-item" onclick="ipcRenderer.invoke('close-this')">Close</div>
+                <div class="dropdown-item" onclick="ipcRenderer.invoke('close-app')">Close All</div>
+            </div>
+        </div>
+        <div class="theme-toggle">
+            <span class="theme-toggle-label">Dark Mode</span>
+            <label class="switch">
+                <input type="checkbox" id="theme-toggle-checkbox" checked="">
+                <span class="slider"></span>
+            </label>
+        </div>
+        <div class="ws-status">
+            <span id="ws-indicator" class="status-dot disconnected"></span>
+            <span id="ws-text">Disconnected</span>
+            <button class="reconnect-button" onclick="ipcRenderer.invoke('reconnect-websocket')">Reconnect</button>
+        </div>
+    </div>
+
+    <!-- Hauptcontainer -->
+    <div class="main-container">
+        <iframe id="toolFrame" width="100%" height="100%"></iframe>
+    </div>
+
+    <script src="script/tools.js"></script>
+    <script src="script/window-bar.js"></script>
+    <script src="script/menu-bar.js"></script>
+    <script src="script/ws.js"></script>
+    <script src="script/notification.js"></script>
+
+</body>
+</html>
