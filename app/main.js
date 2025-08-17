@@ -48,7 +48,9 @@ function connectWS() {
         return console.error("❌ Ungültiges JSON", e);
     }
 
-    console.log(payload);
+    if (payload.action !== "getFile") {
+        console.log(payload)
+    }
 
     if (payload.type === "settings" && payload.data) {
         store.set("username", payload.data.username);
@@ -72,6 +74,7 @@ function connectWS() {
         list = list.map(item => item.id === parseInt(id) ? { ...item, lastupdate, data } : item);
         store.set('functions', list)
     } else if (payload.type === "tools" && payload.action === "getFile" && payload.data) {
+        console.log(payload.data);
         const { id, name, content } = payload.data;
         const buffer = Buffer.from(content, "base64");
         const folderPath = path.join(toolsRootPath, id.toString());
@@ -87,8 +90,8 @@ function connectWS() {
     }
   });
 
-  ws.on("close", () => {
-    console.log("🔌 Verbindung geschlossen");
+  ws.on("close", (code, reason) => {
+    console.log("Socket closed:", code, reason.toString());
     sendNotification("❌ Connection closed", "Please try to reconnect!", "error", 5000);
     BrowserWindow.getAllWindows().forEach(win => {
         win.webContents.send('websocket', false);
@@ -270,16 +273,21 @@ ipcMain.handle('overwrite', (event, overwrite) => {
                 if (touched) {
                     // lokale Struktur in store zurückschreiben
                     store.set('functions', localData);
-                    const files = ["index.html", "main.js", "style.css"];
-                    const id = localEntry.id;
-                    files.forEach(name => {
-                        ws.send(JSON.stringify({
-                            key: API_KEY,
-                            type: "tools",
-                            action: "getFile",
-                            data: { id, name }
-                        }));
-                    })
+                    const id = (localEntry.id).toString();
+                    console.log(id);
+                    if (ensureOpen()) {
+                        const files = ["index.html", "main.js", "style.css"];
+                        files.forEach((name, i) => {
+                            setTimeout(() => {
+                                ws.send(JSON.stringify({
+                                    key: API_KEY,
+                                    type: "tools",
+                                    action: "getFile",
+                                    data: { id, name }
+                                }));
+                            }, i * 100); // 100ms Abstand, je nach Bedarf erhöhen/verkleinern
+                        });
+                    }
                 }
             }
         });
@@ -332,16 +340,6 @@ ipcMain.handle('overwrite', (event, overwrite) => {
                 const updated = [...(store.get('functions') || []), toAdd];
                 store.set('functions', updated);
 
-                const files = ["index.html", "main.js", "style.css"];
-                files.forEach(name => {
-                    ws.send(JSON.stringify({
-                        key: API_KEY,
-                        type: "tools",
-                        action: "getFile",
-                        data: { id, name }
-                    }));
-                })
-
                 if (ensureOpen()) {
                     ws.send(JSON.stringify({
                         key: API_KEY,
@@ -349,6 +347,18 @@ ipcMain.handle('overwrite', (event, overwrite) => {
                         action: "storageGet",
                         data: { id }
                     }));
+                    console.log(id);
+                    const files = ["index.html", "main.js", "style.css"];
+                    files.forEach((name, i) => {
+                        setTimeout(() => {
+                            ws.send(JSON.stringify({
+                                key: API_KEY,
+                                type: "tools",
+                                action: "getFile",
+                                data: { id: id.toString(), name }
+                            }));
+                        }, i * 100); // 100ms Abstand, je nach Bedarf erhöhen/verkleinern
+                    });
                 }
             } else {
                 // ONLINE überschreiben ⇒ auf Server löschen
