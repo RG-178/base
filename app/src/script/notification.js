@@ -37,6 +37,7 @@ const NotificationSystem = (function() {
         notification.innerHTML = `
             <div class="notification-title">${title}</div>
             <div class="notification-message">${message}</div>
+            ${type == "bool" ? `<div class="bool"><button>Yes</button><button>No</button></div>` : ""}
             <div class="notification-close">&times;</div>
             <div class="notification-progress">
                 <div class="notification-progress-bar"></div>
@@ -46,31 +47,41 @@ const NotificationSystem = (function() {
         // Benachrichtigung zum Container hinzufügen
         notificationContainer.appendChild(notification);
         
-        // Fortschrittsbalken animieren
-        const progressBar = notification.querySelector('.notification-progress-bar');
-        progressBar.style.width = '100%';
-        progressBar.style.transitionDuration = `${duration}ms`;
+        if (type != "bool") {
+            const progressBar = notification.querySelector('.notification-progress-bar');
+            progressBar.style.width = '100%';
+            progressBar.style.transitionDuration = `${duration}ms`;
+
+            setTimeout(() => {
+                notification.classList.add('show');
+                progressBar.style.width = '0%';
+            }, 10);
+
+            const timeoutId = setTimeout(() => {
+                removeNotification(notification);
+            }, duration);
+
+            notification.dataset.timeoutId = timeoutId;
+        } else {
+            const bools = notification.querySelectorAll('.bool button');
+            bools[0].addEventListener("click", () => {
+                ipcRenderer.invoke('overwrite', true);
+                removeNotification(notification)
+            });
+            bools[1].addEventListener("click", () => {
+                ipcRenderer.invoke('overwrite', false);
+                removeNotification(notification)
+            });
+            setTimeout(() => {
+                notification.classList.add('show');
+            }, 10);
+        }
         
-        // Benachrichtigung anzeigen (mit Animation)
-        setTimeout(() => {
-            notification.classList.add('show');
-            progressBar.style.width = '0%';
-        }, 10);
-        
-        // Schließen-Button Funktionalität
         const closeButton = notification.querySelector('.notification-close');
         closeButton.addEventListener('click', () => {
             removeNotification(notification);
         });
-        
-        // Automatisches Entfernen nach der angegebenen Zeit
-        const timeoutId = setTimeout(() => {
-            removeNotification(notification);
-        }, duration);
-        
-        // Speichern der Timeout-ID für mögliches vorzeitiges Entfernen
-        notification.dataset.timeoutId = timeoutId;
-        
+         
         return notification;
     }
     

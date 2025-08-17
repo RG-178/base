@@ -10,7 +10,11 @@ const WebSocket = require("ws");
 const WS_URL = "wss://www.florlix.com:2121"; // ggf. IP oder Domain
 const API_KEY = "XwGs1uLqusYK45g989geB41DsxW0HYUg"; // aus deinem Backend
 
+const toolsRootPath = path.join(app.getPath('userData'), 'tools');
+
 let ws = null;
+
+let serverData = null;
 
 function connectWS() {
   ws = new WebSocket(WS_URL);
@@ -49,64 +53,9 @@ function connectWS() {
     if (payload.type === "settings" && payload.data) {
         store.set("username", payload.data.username);
         store.set("password", payload.data.password);
-    } else if (payload.type === "tools" && payload.data) {
-        const localData = store.get('functions');
-        const serverData = payload.data;
-
-        const serverMap = new Map(serverData.map(entry => [entry.id, entry]));
-
-        localData.forEach(localEntry => {
-            const serverEntry = serverMap.get(localEntry.id);
-            if (!serverEntry) return; // Kein passender Server-Eintrag vorhanden
-
-            const updatePayload = {
-                id: localEntry.id,
-            };
-
-            let changed = false;
-
-            if (ws.readyState === WebSocket.OPEN) {
-                const id = localEntry.id;
-                if (localEntry.lastupdate > serverEntry.lastupdate) {
-                    const data = localEntry.data;
-                    const lastupdate = localEntry.lastupdate;
-                    ws.send(JSON.stringify({
-                        key: API_KEY,
-                        type: "tools",
-                        action: "storageSet",
-                        data: { id, data, lastupdate }
-                    }));
-                } else if (localEntry.lastupdate < serverEntry.lastupdate) {
-                    ws.send(JSON.stringify({
-                        key: API_KEY,
-                        type: "tools",
-                        action: "storageGet",
-                        data: { id }
-                    }));
-                }
-            } else {
-                sendNotification("❌ Server Error", "Please try to reconnect!", "error", 5000);
-            }
-
-            if (localEntry.name !== serverEntry.name) {
-                updatePayload.name = localEntry.name;
-                changed = true;
-            }
-
-            if (localEntry.description !== serverEntry.description) {
-                updatePayload.description = localEntry.description;
-                changed = true;
-            }
-
-            if (changed) {
-                ws.send(JSON.stringify({
-                    key: API_KEY,
-                    type: "tools",
-                    action: "update",
-                    data: updatePayload
-                }));
-            }
-        });
+    } else if (payload.type === "tools" && payload.action != "getFile" && payload.data) {
+        serverData = payload.data;
+        sendNotification("Sync Data", "Do you want to overwrite your local data? (No, will overwrite server data.)", "bool", 60000);
     } else if (payload.message == "Tool created") {
         sendNotification("✅ Tool created", "Tool saved on Server!", "success", 5000);
     } else if (payload.message == "Tool deleted") {
@@ -122,6 +71,14 @@ function connectWS() {
         const { id, lastupdate, data } = payload;
         list = list.map(item => item.id === parseInt(id) ? { ...item, lastupdate, data } : item);
         store.set('functions', list)
+    } else if (payload.type === "tools" && payload.action === "getFile" && payload.data) {
+        const { id, name, content } = payload.data;
+        const buffer = Buffer.from(content, "base64");
+        const folderPath = path.join(toolsRootPath, id.toString());
+
+        if (!fs.existsSync(folderPath)) fs.mkdirSync(folderPath, { recursive: true });
+
+        fs.writeFileSync(path.join(folderPath, name), buffer);
     }
 
     if (payload.error) {
@@ -150,8 +107,6 @@ function connectWS() {
 connectWS();
 
 remoteMain.initialize();
-
-const toolsRootPath = path.join(app.getPath('userData'), 'tools');
 
 let win;
 
@@ -228,6 +183,191 @@ ipcMain.handle('is-websocket', async (event) => {
 
 ipcMain.handle('reconnect-websocket', async (event) => {
     connectWS()
+});
+
+ipcMain.handle('overwrite', (event, overwrite) => {
+    try {
+        if (!serverData) {
+            sendNotification("❌ Server Error", "No server data available.", "error", 5000);
+            return;
+        }
+
+        const localData = store.get('functions') || [];
+        const localMap  = new Map(localData.map(entry => [entry.id, entry]));
+        const serverMap = new Map(serverData.map(entry => [entry.id, entry]));
+
+        const ensureOpen = () => {
+            if (ws.readyState !== WebSocket.OPEN) {
+                sendNotification("❌ Server Error", "Please try to reconnect!", "error", 5000);
+                return false;
+            }
+            return true;
+        };
+
+        // -------- 1) Einträge, die es auf BEIDEN Seiten gibt -----------
+        localData.forEach(localEntry => {
+            const serverEntry = serverMap.get(localEntry.id);
+            if (!serverEntry) return; // Nur-lokale Einträge werden später behandelt
+
+            // --- DATA per lastupdate entscheiden ---
+            if (ensureOpen()) {
+                const id = localEntry.id;
+
+                // WICHTIG: immer ausschließlich lastupdate entscheiden lassen
+                if (localEntry.lastupdate > serverEntry.lastupdate) {
+                    // Lokale Daten sind neuer → zum Server hochladen
+                    ws.send(JSON.stringify({
+                        key: API_KEY,
+                        type: "tools",
+                        action: "storageSet",
+                        data: { id, data: localEntry.data, lastupdate: localEntry.lastupdate }
+                    }));
+                } else if (localEntry.lastupdate < serverEntry.lastupdate) {
+                    // Server-Daten sind neuer → vom Server holen
+                    ws.send(JSON.stringify({
+                        key: API_KEY,
+                        type: "tools",
+                        action: "storageGet",
+                        data: { id }
+                    }));
+                }
+            }
+
+            // --- NAME/DESCRIPTION sync je nach Modus ---
+            if (overwrite === false) {
+                // ONLINE überschreiben ⇒ Server an lokale Metadaten anpassen
+                const updatePayload = { id: localEntry.id };
+                let changed = false;
+
+                if (localEntry.name !== serverEntry.name) {
+                    updatePayload.name = localEntry.name;
+                    changed = true;
+                }
+                if (localEntry.description !== serverEntry.description) {
+                    updatePayload.description = localEntry.description;
+                    changed = true;
+                }
+
+                if (changed && ensureOpen()) {
+                    ws.send(JSON.stringify({
+                        key: API_KEY,
+                        type: "tools",
+                        action: "update",
+                        data: updatePayload
+                    }));
+                }
+            } else {
+                // LOKAL überschreiben ⇒ lokale Metadaten an Server angleichen (lokal updaten)
+                let touched = false;
+                if (localEntry.name !== serverEntry.name) {
+                    localEntry.name = serverEntry.name;
+                    touched = true;
+                }
+                if (localEntry.description !== serverEntry.description) {
+                    localEntry.description = serverEntry.description;
+                    touched = true;
+                }
+                if (touched) {
+                    // lokale Struktur in store zurückschreiben
+                    store.set('functions', localData);
+                    const files = ["index.html", "main.js", "style.css"];
+                    const id = localEntry.id;
+                    files.forEach(name => {
+                        ws.send(JSON.stringify({
+                            key: API_KEY,
+                            type: "tools",
+                            action: "getFile",
+                            data: { id, name }
+                        }));
+                    })
+                }
+            }
+        });
+
+        // -------- 2) Nur-LOKALE Einträge -----------
+        for (const [id, localOnly] of localMap) {
+            if (serverMap.has(id)) continue; // bereits oben behandelt
+
+            if (overwrite === true) {
+                // LOKAL überschreiben ⇒ lokal löschen, da es auf Server nicht existiert
+                const newLocal = localData.filter(e => e.id !== id);
+                store.set('functions', newLocal);
+            } else {
+                // ONLINE überschreiben ⇒ auf Server neu anlegen + DATA hochladen
+                if (ensureOpen()) {
+                    const { name, description, lastupdate, data } = localOnly;
+
+                    // 1) create (Meta)
+                    ws.send(JSON.stringify({
+                        key: API_KEY,
+                        type: "tools",
+                        action: "create",
+                        data: { id, name, description, lastupdate }
+                    }));
+
+                    // 2) storageSet (Daten)
+                    ws.send(JSON.stringify({
+                        key: API_KEY,
+                        type: "tools",
+                        action: "storageSet",
+                        data: { id, data, lastupdate }
+                    }));
+                }
+            }
+        }
+
+        // -------- 3) Nur-SERVER Einträge -----------
+        for (const [id, serverOnly] of serverMap) {
+            if (localMap.has(id)) continue; // bereits oben behandelt
+
+            if (overwrite === true) {
+                // LOKAL überschreiben ⇒ lokal hinzufügen (Meta) + DATA vom Server holen
+                const toAdd = {
+                    id,
+                    name: serverOnly.name,
+                    description: serverOnly.description,
+                    lastupdate: serverOnly.lastupdate,
+                    data: undefined // kommt via storageGet
+                };
+                const updated = [...(store.get('functions') || []), toAdd];
+                store.set('functions', updated);
+
+                const files = ["index.html", "main.js", "style.css"];
+                files.forEach(name => {
+                    ws.send(JSON.stringify({
+                        key: API_KEY,
+                        type: "tools",
+                        action: "getFile",
+                        data: { id, name }
+                    }));
+                })
+
+                if (ensureOpen()) {
+                    ws.send(JSON.stringify({
+                        key: API_KEY,
+                        type: "tools",
+                        action: "storageGet",
+                        data: { id }
+                    }));
+                }
+            } else {
+                // ONLINE überschreiben ⇒ auf Server löschen
+                if (ensureOpen()) {
+                    ws.send(JSON.stringify({
+                        key: API_KEY,
+                        type: "tools",
+                        action: "delete",
+                        data: { id }
+                    }));
+                }
+            }
+        }
+
+        sendNotification("✅ Sync abgeschlossen", overwrite ? "Lokale Seite wurde überschrieben." : "Server wurde überschrieben.", "success", 3500);
+    } catch (err) {
+        console.error(err);
+        sendNotification("❌ Sync Error", String(err?.message || err), "error", 5000);
+    }
 });
 
 ipcMain.handle('get-tools', () => store.get('functions') || []);
