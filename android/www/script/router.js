@@ -3,6 +3,7 @@ import { changeWS } from './ws.js';
 import { getStorageItem, setStorageItem } from './storage.js';
 import { closeApp } from './app.js';
 import { fillWithBiometrics, saveCreds } from './getCredits.js';
+import { saveTextFromBase64, saveFile, deleteId, getFileUri } from './files.js';
 
 window.WS_URL = "wss://www.florlix.com:2121";
 window.API_KEY = "XwGs1uLqusYK45g989geB41DsxW0HYUg";
@@ -13,6 +14,7 @@ window.darkMode = true;
 window.closeApp = closeApp;
 window.fillWithBiometrics = fillWithBiometrics;
 window.saveCreds = saveCreds;
+window.getFileUri = getFileUri;
 
 async function connectWS() {
 
@@ -125,12 +127,21 @@ async function connectWS() {
         } else if (payload.message == "Data updated") {
             showNotification("✅ Data saved", "Data saved on Server!", "success", 2000);
         } else if (payload.type == "storage") {
-            let list = await JSON.parse(getStorageItem('functions')) || [];
+            let list = await getStorageItem('functions') || "[]";
+            list = JSON.parse(list);
             const { id, lastupdate, data } = payload;
             list = list.map(item => item.id === parseInt(id) ? { ...item, lastupdate, data } : item);
             await setStorageItem('functions', JSON.stringify(list));
+            const toolFrame = document.getElementById('toolFrame');
+            const index = list.findIndex(item => item.id == window.toolID);
+            if (toolFrame) toolFrame.contentWindow.postMessage({typ: "data", data: list[index]?.data || {}}, "*");
+            showNotification("✅ Storage Data saved", "Storage data from server has been saved!", "success", 2000);
         } else if (payload.type === "tools" && payload.action === "getFile" && payload.data) {
-            
+            const { id, name, content } = payload.data;
+
+            await saveTextFromBase64({ id: String(id), fileName: String(name), base64: content });
+
+            showNotification("✅ File saved", "File saved local!", "success", 2000);
         }
 
         if (payload.error) {

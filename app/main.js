@@ -16,6 +16,14 @@ let ws = null;
 
 let serverData = null;
 
+const ensureOpen = () => {
+    if (ws.readyState !== WebSocket.OPEN) {
+        sendNotification("❌ Server Error", "Please try to reconnect!", "error", 5000);
+        return false;
+    }
+    return true;
+};
+
 function connectWS() {
   ws = new WebSocket(WS_URL);
 
@@ -57,6 +65,36 @@ function connectWS() {
         store.set("password", payload.data.password);
     } else if (payload.type === "tools" && payload.action != "getFile" && payload.data) {
         serverData = payload.data;
+        const localData = store.get('functions');
+        const serverMap = new Map(serverData.map(entry => [entry.id, entry]));
+        if (localData !== undefined && localData.length > 0) {
+            localData.forEach(localEntry => {
+                const serverEntry = serverMap.get(localEntry.id);
+                if (!serverEntry) return;
+                if (ws.readyState === WebSocket.OPEN) {
+                    const id = localEntry.id;
+                    if (localEntry.lastupdate > serverEntry.lastupdate) {
+                        const data = localEntry.data;
+                        const lastupdate = localEntry.lastupdate;
+                        ws.send(JSON.stringify({
+                            key: API_KEY,
+                            type: "tools",
+                            action: "storageSet",
+                            data: { id, data, lastupdate }
+                        }));
+                    } else if (localEntry.lastupdate < serverEntry.lastupdate) {
+                        ws.send(JSON.stringify({
+                            key: API_KEY,
+                            type: "tools",
+                            action: "storageGet",
+                            data: { id }
+                        }))
+                    }
+                } else {
+                    sendNotification("❌ Server Error", "Please try to reconnect!", "error", 5000);
+                }
+            });
+        }
         sendNotification("Sync Data", "Do you want to overwrite your local data? (No, will overwrite server data.)", "bool", 60000);
     } else if (payload.message == "Tool created") {
         sendNotification("✅ Tool created", "Tool saved on Server!", "success", 5000);
@@ -72,7 +110,10 @@ function connectWS() {
         let list = store.get('functions') || [];
         const { id, lastupdate, data } = payload;
         list = list.map(item => item.id === parseInt(id) ? { ...item, lastupdate, data } : item);
-        store.set('functions', list)
+        store.set('functions', list);
+        BrowserWindow.getAllWindows().forEach(win => {
+            win.webContents.send('storage-update');
+        });
     } else if (payload.type === "tools" && payload.action === "getFile" && payload.data) {
         console.log(payload.data);
         const { id, name, content } = payload.data;
@@ -82,29 +123,30 @@ function connectWS() {
         if (!fs.existsSync(folderPath)) fs.mkdirSync(folderPath, { recursive: true });
 
         fs.writeFileSync(path.join(folderPath, name), buffer);
+        sendNotification("✅ File saved", "File saved local!", "success", 2000);
     }
 
     if (payload.error) {
         console.error("❌ Serverfehler:", payload.error);
         sendNotification("❌ Server Error", "Please try to reconnect!", "error", 5000);
     }
-  });
-
-  ws.on("close", (code, reason) => {
-    console.log("Socket closed:", code, reason.toString());
-    sendNotification("❌ Connection closed", "Please try to reconnect!", "error", 5000);
-    BrowserWindow.getAllWindows().forEach(win => {
-        win.webContents.send('websocket', false);
     });
-  });
 
-  ws.on("error", (err) => {
-    console.error("🚨 WS Fehler:", err);
-    sendNotification("❌ Server Error", "Please try to reconnect!", "error", 5000);
-    BrowserWindow.getAllWindows().forEach(win => {
-        win.webContents.send('websocket', false);
+    ws.on("close", (code, reason) => {
+        console.log("Socket closed:", code, reason.toString());
+        sendNotification("❌ Connection closed", "Please try to reconnect!", "error", 5000);
+        BrowserWindow.getAllWindows().forEach(win => {
+            win.webContents.send('websocket', false);
+        });
     });
-  });
+
+    ws.on("error", (err) => {
+        console.error("🚨 WS Fehler:", err);
+        sendNotification("❌ Server Error", "Please try to reconnect!", "error", 5000);
+        BrowserWindow.getAllWindows().forEach(win => {
+            win.webContents.send('websocket', false);
+        });
+    });
 }
 
 connectWS();
@@ -199,14 +241,6 @@ ipcMain.handle('overwrite', (event, overwrite) => {
         const localMap  = new Map(localData.map(entry => [entry.id, entry]));
         const serverMap = new Map(serverData.map(entry => [entry.id, entry]));
 
-        const ensureOpen = () => {
-            if (ws.readyState !== WebSocket.OPEN) {
-                sendNotification("❌ Server Error", "Please try to reconnect!", "error", 5000);
-                return false;
-            }
-            return true;
-        };
-
         // -------- 1) Einträge, die es auf BEIDEN Seiten gibt -----------
         localData.forEach(localEntry => {
             const serverEntry = serverMap.get(localEntry.id);
@@ -277,15 +311,13 @@ ipcMain.handle('overwrite', (event, overwrite) => {
                     console.log(id);
                     if (ensureOpen()) {
                         const files = ["index.html", "main.js", "style.css"];
-                        files.forEach((name, i) => {
-                            setTimeout(() => {
-                                ws.send(JSON.stringify({
-                                    key: API_KEY,
-                                    type: "tools",
-                                    action: "getFile",
-                                    data: { id, name }
-                                }));
-                            }, i * 100); // 100ms Abstand, je nach Bedarf erhöhen/verkleinern
+                        files.forEach(name => {
+                            ws.send(JSON.stringify({
+                                key: API_KEY,
+                                type: "tools",
+                                action: "getFile",
+                                data: { id, name }
+                            }));
                         });
                     }
                 }
@@ -349,15 +381,13 @@ ipcMain.handle('overwrite', (event, overwrite) => {
                     }));
                     console.log(id);
                     const files = ["index.html", "main.js", "style.css"];
-                    files.forEach((name, i) => {
-                        setTimeout(() => {
-                            ws.send(JSON.stringify({
-                                key: API_KEY,
-                                type: "tools",
-                                action: "getFile",
-                                data: { id: id.toString(), name }
-                            }));
-                        }, i * 100); // 100ms Abstand, je nach Bedarf erhöhen/verkleinern
+                    files.forEach(name => {
+                        ws.send(JSON.stringify({
+                            key: API_KEY,
+                            type: "tools",
+                            action: "getFile",
+                            data: { id, name }
+                        }));
                     });
                 }
             } else {
@@ -504,6 +534,24 @@ ipcMain.handle("push-tool", async (event, toolId) => {
     }
 
     sendNotification(`📁 All Files sent`, "", "info", 2000);
+});
+
+ipcMain.handle("get-files", async (event, toolId) => {
+    console.log("📤 Get starting:", toolId);
+    const id = toolId.toString();
+    sendNotification("📤 Starting get...", "This won't take long...", "info", 2000);
+
+    const files = ["index.html", "main.js", "style.css"];
+    files.forEach(name => {
+        ws.send(JSON.stringify({
+            key: API_KEY,
+            type: "tools",
+            action: "getFile",
+            data: { id, name }
+        }));
+    });
+
+    sendNotification(`📁 All Files saved`, "", "info", 2000);
 });
 
 ipcMain.handle('delete-tool', (event, id) => {

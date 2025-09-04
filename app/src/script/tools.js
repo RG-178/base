@@ -8,7 +8,11 @@ function reloadIframe() {
 ipcRenderer.on('tooldata', (event, data) => {
     const toolFrame = document.getElementById('toolFrame');
     if (toolFrame) toolFrame.contentWindow.postMessage({typ: "data", data: data}, "*");
-})
+});
+
+ipcRenderer.on('storage-update', (event) => {
+    ipcRenderer.invoke('get-tooldata', toolName)
+});
 
 ipcRenderer.on('iframe', (event, path) => {
     const toolFrame = document.getElementById('toolFrame');

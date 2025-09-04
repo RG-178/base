@@ -5,13 +5,6 @@ var currentEditId = null;
 
 // DOM-Elemente
 var functionList = document.getElementById('function-list');
-var addFunctionBtn = document.getElementById('add-function-btn');
-var functionModal = document.getElementById('function-modal');
-var modalClose = document.getElementById('modal-close');
-var cancelBtn = document.getElementById('cancel-btn');
-var saveBtn = document.getElementById('save-btn');
-var functionForm = document.getElementById('function-form');
-var modalTitle = document.getElementById('modal-title');
 
 async function renderFunctions() {
     functionList.innerHTML = '';
@@ -33,7 +26,7 @@ async function renderFunctions() {
         functionList.appendChild(card);
 
         // Doppelklick-Event
-        card.addEventListener('dblclick', () => openTool(tool.id));
+        card.addEventListener('click', () => openTool(tool.id));
     });
 
     document.querySelectorAll('.get-btn').forEach(btn => {
@@ -47,10 +40,14 @@ async function renderFunctions() {
 async function openTool(tool) {
     console.log("Opening tool:", tool);
     await loadPage('tools.html');
-}
-
-function editTool(tool) {
-    ipcRenderer.invoke('edit-tool', tool);
+    const { uri } = await getFileUri({ id: String(tool), fileName: 'index.html' });
+    const toolFrame = document.getElementById('toolFrame');
+    if (toolFrame) {
+        toolFrame.src = window.Capacitor.convertFileSrc(uri);
+        window.toolID = tool;
+    } else {
+        await loadPage('home.html');
+    }
 }
 
 function getTool(id) {
@@ -64,62 +61,6 @@ function getTool(id) {
         }));
     })
 }
-
-// Funktion bearbeiten
-function editFunction(id) {
-    const func = functions.find(f => f.id === id);
-    if (func) {
-        currentEditId = id;
-        document.getElementById('function-name').value = func.name;
-        document.getElementById('function-description').value = func.description;
-        modalTitle.textContent = 'Edit function';
-        functionModal.style.display = 'flex';
-    }
-}
-
-// Funktion löschen
-function deleteFunction(id) {
-    if (confirm('Are you sure you want to delete this function?')) {
-        ipcRenderer.invoke('delete-tool', id);
-        renderFunctions();
-    }
-}
-
-// Neue Funktion hinzufügen
-function addFunction() {
-    currentEditId = null;
-    document.getElementById('function-name').value = '';
-    document.getElementById('function-description').value = '';
-    modalTitle.textContent = 'Create new function';
-    functionModal.style.display = 'flex';
-}
-
-// Funktion speichern
-function saveFunction() {
-    const name = document.getElementById('function-name').value;
-    const description = document.getElementById('function-description').value;
-
-    if (!name) {
-        alert('Please enter a name.');
-        return;
-    }
-
-    if (currentEditId === null) {
-        ipcRenderer.invoke('make-tools', { name, description });
-    } else {
-        ipcRenderer.invoke('change-tool', { id: currentEditId, name, description });
-    }
-
-    functionModal.style.display = 'none';
-    renderFunctions();
-}
-
-// Event-Listener
-addFunctionBtn.addEventListener('click', addFunction);
-modalClose.addEventListener('click', () => functionModal.style.display = 'none');
-cancelBtn.addEventListener('click', () => functionModal.style.display = 'none');
-saveBtn.addEventListener('click', saveFunction);
-functionForm.addEventListener('submit', saveFunction);
 
 // Initial rendern
 renderFunctions();

@@ -28,6 +28,7 @@ function renderFunctions() {
                 <div class="function-title">${tool.name}</div>
                 <div class="function-description">${tool.description}</div>
                 <div class="function-actions">
+                    <button class="btn btn-secondary get-btn" data-id="${tool.id}">Get</button>
                     <button class="btn btn-secondary push-btn" data-id="${tool.id}">Push</button>
                     <button class="btn btn-secondary files-btn" data-id="${tool.id}">Files</button>
                     <button class="btn btn-secondary edit-btn" data-id="${tool.id}">Edit</button>
@@ -43,6 +44,13 @@ function renderFunctions() {
             card.addEventListener('contextmenu', (e) => {
                 e.preventDefault();
                 showContextMenu(e, tool.id);
+            });
+        });
+
+        document.querySelectorAll('.get-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                getFiles(btn.dataset.id);
             });
         });
 
@@ -88,6 +96,10 @@ function editTool(tool) {
 
 function pushTool(tool) {
     ipcRenderer.invoke('push-tool', tool);
+}
+
+function getFiles(tool) {
+    ipcRenderer.invoke('get-files', tool);
 }
 
 // Funktion bearbeiten
@@ -173,6 +185,11 @@ document.getElementById('context-files').addEventListener('click', () => {
 
 document.getElementById('context-push').addEventListener('click', () => {
     pushTool(contextMenuTargetId);
+    contextMenu.style.display = 'none';
+});
+
+document.getElementById('context-get').addEventListener('click', () => {
+    getFiles(contextMenuTargetId);
     contextMenu.style.display = 'none';
 });
 
