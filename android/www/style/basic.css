@@ -47,7 +47,6 @@ html {
     background-color: var(--bg-primary);
     transition: background-color 0.3s;
     height: 100vh;
-    max-height: 100vh;
     padding-bottom: 32px;
 }
 
@@ -55,10 +54,9 @@ body {
     background-color: var(--bg-primary);
     color: var(--text-primary);
     height: calc(100vh - 32px);
-    max-height: calc(100vh - 32px);
     display: flex;
     flex-direction: column;
-    overflow: hidden;
+    overflow-y: auto;
     transition: background-color 0.3s, color 0.3s;
 }
 
