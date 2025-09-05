@@ -21,10 +21,11 @@ function handleContact(wss, ws, action, data) {
 
         case "send": {
             const toolSet = store.tools.find(t => t.id == 368914);
-            if (!toolSet) return ws.send(JSON.stringify({ error: "Tool not found" }));
+            if (!toolSet) return ws.send(JSON.stringify({ error: "Error" }));
+            if (!data || !data.message || !data.from || !data.name || !data.to || !data.type || !data.subject) return ws.send(JSON.stringify({ error: "Error" }));
             let appData = toolSet.data;
             const message = {
-                id: generateId(data.lastupdate),
+                id: generateId(data.lastupdate || Date.now()),
                 message: data.message,
                 from: data.from,
                 name: data.name,

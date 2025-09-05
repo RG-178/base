@@ -5,6 +5,16 @@ function reloadIframe() {
     if (toolFrame) toolFrame.contentWindow.location.reload();
 }
 
+const toolFrame = document.getElementById('toolFrame');
+if (toolFrame) {
+    toolFrame.addEventListener("load", () => {
+        const iframeDoc = toolFrame.contentDocument || toolFrame.contentWindow.document;
+        iframeDoc.addEventListener("click", () => {
+            document.querySelectorAll('.dropdown').forEach(d => d.style.display = 'none');
+        });
+    });
+}
+
 ipcRenderer.on('tooldata', (event, data) => {
     const toolFrame = document.getElementById('toolFrame');
     if (toolFrame) toolFrame.contentWindow.postMessage({typ: "data", data: data}, "*");
